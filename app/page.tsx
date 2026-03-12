@@ -32,7 +32,7 @@ export default function Home() {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Please try again.",
       );
       setAppState("form");
     }
@@ -130,9 +130,6 @@ export default function Home() {
             >
               🗺️ Plan My Trip
             </button>
-            <p className="mt-6 text-slate-400 text-sm">
-              Powered by Groq · Free to use
-            </p>
           </div>
         )}
 
