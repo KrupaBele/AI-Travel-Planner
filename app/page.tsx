@@ -65,6 +65,22 @@ export default function Home() {
       data.travelTips.forEach((tip, i) => {
         text += `${i + 1}. ${tip}\n`;
       });
+      text += "\n";
+    }
+
+    if (data.hotelSuggestions?.length) {
+      text += "🏨 HOTEL SUGGESTIONS\n";
+      text += "─".repeat(30) + "\n";
+      data.hotelSuggestions.forEach((hotel) => {
+        text += `• ${hotel.name} [${hotel.type}] — ${hotel.priceRange}\n`;
+        text += `  ${hotel.description}\n`;
+        if (hotel.highlights?.length) {
+          hotel.highlights.forEach((h) => {
+            text += `  - ${h}\n`;
+          });
+        }
+        text += "\n";
+      });
     }
 
     return text;
@@ -431,6 +447,64 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {/* ── Hotel Suggestions ── */}
+            {itinerary.hotelSuggestions?.length > 0 && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-md border border-slate-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4">
+                  <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                    <span>🏨</span> Hotel Suggestions
+                  </h3>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {itinerary.hotelSuggestions.map((hotel, idx) => {
+                    const typeBadge: Record<string, string> = {
+                      Budget: "bg-green-100 text-green-700",
+                      Hostel: "bg-lime-100 text-lime-700",
+                      "Mid-range": "bg-sky-100 text-sky-700",
+                      Boutique: "bg-pink-100 text-pink-700",
+                      Luxury: "bg-amber-100 text-amber-700",
+                    };
+                    return (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-slate-800 text-sm leading-tight">
+                            {hotel.name}
+                          </h4>
+                          <span
+                            className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${typeBadge[hotel.type] ?? "bg-slate-100 text-slate-600"}`}
+                          >
+                            {hotel.type}
+                          </span>
+                        </div>
+                        <p className="text-violet-600 font-semibold text-xs">
+                          {hotel.priceRange}
+                        </p>
+                        <p className="text-slate-600 text-xs leading-relaxed">
+                          {hotel.description}
+                        </p>
+                        {hotel.highlights?.length > 0 && (
+                          <ul className="mt-1 space-y-1">
+                            {hotel.highlights.map((h, i) => (
+                              <li
+                                key={i}
+                                className="flex items-center gap-1.5 text-xs text-slate-500"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" />
+                                {h}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -7,12 +7,21 @@ export interface DayItinerary {
   evening: string;
 }
 
+export interface HotelSuggestion {
+  name: string;
+  type: "Budget" | "Mid-range" | "Luxury" | "Hostel" | "Boutique";
+  priceRange: string;
+  description: string;
+  highlights: string[];
+}
+
 export interface Itinerary {
   destination: string;
   days: DayItinerary[];
   foodSuggestions: string[];
   travelTips: string[];
   keyPlaces: string[];
+  hotelSuggestions: HotelSuggestion[];
 }
 
 export interface TripFormData {
@@ -60,12 +69,36 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no code 
   ],
   "foodSuggestions": ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5"],
   "travelTips": ["tip 1", "tip 2", "tip 3", "tip 4", "tip 5"],
-  "keyPlaces": ["Real specific landmark or attraction name 1", "Real specific landmark or attraction name 2", "Real specific landmark or attraction name 3", "Real specific landmark or attraction name 4", "Real specific landmark or attraction name 5", "Real specific landmark or attraction name 6"]
+  "keyPlaces": ["Real specific landmark or attraction name 1", "Real specific landmark or attraction name 2", "Real specific landmark or attraction name 3", "Real specific landmark or attraction name 4", "Real specific landmark or attraction name 5", "Real specific landmark or attraction name 6"],
+  "hotelSuggestions": [
+    {
+      "name": "Hotel Name",
+      "type": "Budget",
+      "priceRange": "$30-60/night",
+      "description": "Brief description of the hotel and its location.",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    },
+    {
+      "name": "Hotel Name",
+      "type": "Mid-range",
+      "priceRange": "$80-150/night",
+      "description": "Brief description of the hotel and its location.",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    },
+    {
+      "name": "Hotel Name",
+      "type": "Luxury",
+      "priceRange": "$200+/night",
+      "description": "Brief description of the hotel and its location.",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    }
+  ]
 }
 
 Rules:
 - Generate exactly ${formData.days} day entries.
 - For keyPlaces, list 6 real, well-known, searchable landmarks, attractions, museums, parks, or neighborhoods in ${formData.destination} that are actually mapped on OpenStreetMap. Use their official names (e.g. "Eiffel Tower, Paris" not just "famous tower").
+- For hotelSuggestions, provide 3-4 real or realistic hotels in ${formData.destination} suited to the ${formData.budget} budget. Include at least one option per relevant tier (Budget/Hostel, Mid-range, Luxury, or Boutique). The type field must be exactly one of: "Budget", "Mid-range", "Luxury", "Hostel", or "Boutique".
 - Tailor everything to ${formData.travelStyle} travel style and ${formData.budget} budget.
 - Include local experiences, hidden gems, and practical details.`;
 
