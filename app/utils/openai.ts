@@ -132,3 +132,75 @@ Rules:
     throw new Error("Failed to parse the AI response. Please try again.");
   }
 }
+
+export async function generateMoreHotels(
+  destination: string,
+  budget: TripFormData["budget"],
+  existingNames: string[]
+): Promise<HotelSuggestion[]> {
+  const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "Groq API key is missing. Please add NEXT_PUBLIC_GROQ_API_KEY to your .env.local file."
+    );
+  }
+
+  const client = new Groq({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+
+  const avoidList =
+    existingNames.length > 0
+      ? `Do NOT suggest any of these already-shown hotels: ${existingNames.join(", ")}.`
+      : "";
+
+  const prompt = `Suggest 3 more hotels in ${destination} for a ${budget} budget traveler.
+${avoidList}
+Return ONLY a valid JSON array (no markdown, no code blocks, no extra text) with this exact structure:
+[
+  {
+    "name": "Hotel Name",
+    "type": "Mid-range",
+    "priceRange": "$80-150/night",
+    "description": "Brief description of the hotel and its location.",
+    "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+  }
+]
+Rules:
+- Return exactly 3 hotel objects.
+- The type field must be exactly one of: "Budget", "Mid-range", "Luxury", "Hostel", or "Boutique".
+- Vary the types — do not repeat all the same tier.
+- Use real or realistic hotel names in ${destination}.`;
+
+  const response = await client.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an expert travel planner. Always respond with valid JSON only. No markdown, no code blocks, no extra text — just a raw JSON array.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: 0.9,
+    max_tokens: 1024,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error("No response received from Groq.");
+  }
+
+  try {
+    const cleaned = content.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned) as HotelSuggestion[];
+    return parsed;
+  } catch {
+    throw new Error("Failed to parse hotel suggestions. Please try again.");
+  }
+}

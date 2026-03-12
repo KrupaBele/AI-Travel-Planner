@@ -4,7 +4,12 @@ import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import TripForm from "./components/TripForm";
 import ItineraryCard from "./components/ItineraryCard";
-import { generateItinerary, Itinerary, TripFormData } from "./utils/openai";
+import {
+  generateItinerary,
+  generateMoreHotels,
+  Itinerary,
+  TripFormData,
+} from "./utils/openai";
 
 // Leaflet requires browser APIs — must disable SSR
 const MapView = dynamic(() => import("./components/MapView"), { ssr: false });
@@ -16,11 +21,35 @@ export default function Home() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [moreHotelsLoading, setMoreHotelsLoading] = useState(false);
+  const [tripFormData, setTripFormData] = useState<TripFormData | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  const handleLoadMoreHotels = async () => {
+    if (!itinerary || !tripFormData) return;
+    setMoreHotelsLoading(true);
+    try {
+      const existingNames = itinerary.hotelSuggestions.map((h) => h.name);
+      const more = await generateMoreHotels(
+        itinerary.destination,
+        tripFormData.budget,
+        existingNames,
+      );
+      setItinerary({
+        ...itinerary,
+        hotelSuggestions: [...itinerary.hotelSuggestions, ...more],
+      });
+    } catch {
+      // silently ignore — button stays available for retry
+    } finally {
+      setMoreHotelsLoading(false);
+    }
+  };
 
   const handleFormSubmit = async (formData: TripFormData) => {
     setAppState("loading");
     setError(null);
+    setTripFormData(formData);
     try {
       const result = await generateItinerary(formData);
       setItinerary(result);
@@ -454,57 +483,114 @@ export default function Home() {
             {/* ── Hotel Suggestions ── */}
             {itinerary.hotelSuggestions?.length > 0 && (
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-md border border-slate-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4">
+                <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4 flex items-center justify-between">
                   <h3 className="text-white font-bold text-lg flex items-center gap-2">
                     <span>🏨</span> Hotel Suggestions
                   </h3>
+                  <span className="text-violet-200 text-xs font-medium">
+                    {itinerary.hotelSuggestions.length} hotels
+                  </span>
                 </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {itinerary.hotelSuggestions.map((hotel, idx) => {
-                    const typeBadge: Record<string, string> = {
-                      Budget: "bg-green-100 text-green-700",
-                      Hostel: "bg-lime-100 text-lime-700",
-                      "Mid-range": "bg-sky-100 text-sky-700",
-                      Boutique: "bg-pink-100 text-pink-700",
-                      Luxury: "bg-amber-100 text-amber-700",
-                    };
-                    return (
-                      <div
-                        key={idx}
-                        className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-2"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-slate-800 text-sm leading-tight">
-                            {hotel.name}
-                          </h4>
-                          <span
-                            className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${typeBadge[hotel.type] ?? "bg-slate-100 text-slate-600"}`}
-                          >
-                            {hotel.type}
-                          </span>
+                <div className="p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {itinerary.hotelSuggestions.map((hotel, idx) => {
+                      const typeBadge: Record<string, string> = {
+                        Budget: "bg-green-100 text-green-700",
+                        Hostel: "bg-lime-100 text-lime-700",
+                        "Mid-range": "bg-sky-100 text-sky-700",
+                        Boutique: "bg-pink-100 text-pink-700",
+                        Luxury: "bg-amber-100 text-amber-700",
+                      };
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-2"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-bold text-slate-800 text-sm leading-tight">
+                              {hotel.name}
+                            </h4>
+                            <span
+                              className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${typeBadge[hotel.type] ?? "bg-slate-100 text-slate-600"}`}
+                            >
+                              {hotel.type}
+                            </span>
+                          </div>
+                          <p className="text-violet-600 font-semibold text-xs">
+                            {hotel.priceRange}
+                          </p>
+                          <p className="text-slate-600 text-xs leading-relaxed">
+                            {hotel.description}
+                          </p>
+                          {hotel.highlights?.length > 0 && (
+                            <ul className="mt-1 space-y-1">
+                              {hotel.highlights.map((h, i) => (
+                                <li
+                                  key={i}
+                                  className="flex items-center gap-1.5 text-xs text-slate-500"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" />
+                                  {h}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
-                        <p className="text-violet-600 font-semibold text-xs">
-                          {hotel.priceRange}
-                        </p>
-                        <p className="text-slate-600 text-xs leading-relaxed">
-                          {hotel.description}
-                        </p>
-                        {hotel.highlights?.length > 0 && (
-                          <ul className="mt-1 space-y-1">
-                            {hotel.highlights.map((h, i) => (
-                              <li
-                                key={i}
-                                className="flex items-center gap-1.5 text-xs text-slate-500"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" />
-                                {h}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {/* More Hotels button */}
+                  <div className="mt-5 flex justify-center">
+                    <button
+                      onClick={handleLoadMoreHotels}
+                      disabled={moreHotelsLoading}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl border-2 border-violet-400 text-violet-600 font-semibold text-sm hover:bg-violet-50 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {moreHotelsLoading ? (
+                        <>
+                          <svg
+                            className="animate-spin w-4 h-4 text-violet-500"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                          Finding more hotels…
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          More Hotels
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
